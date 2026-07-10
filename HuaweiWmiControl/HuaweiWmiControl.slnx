@@ -9,4 +9,6 @@
     <Platform Solution="*|x86" Project="x86" />
     <Platform Solution="*|arm64" Project="arm64" />
   </Project>
+  <Project Path="..\HuaweiWmiControl.Abstractions\HuaweiWmiControl.Abstractions.csproj" />
+  <Project Path="..\HuaweiWmiControl.Tests\HuaweiWmiControl.Tests.csproj" />
 </Solution>
