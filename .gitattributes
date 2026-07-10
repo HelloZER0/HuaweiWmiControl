@@ -1,0 +1,17 @@
+# Auto-detect text files
+* text=auto
+
+# C# source files
+*.cs text diff=csharp
+*.xaml text
+*.csproj text
+*.sln text diff=merge
+
+# Markdown
+*.md text
+
+# Git LFS for large binaries if needed
+*.exe binary
+*.dll binary
+*.png binary
+*.ico binary

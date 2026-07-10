@@ -1,0 +1,51 @@
+# === .NET ===
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.ilk
+*.pdb
+*.tlog
+ipch/
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.log
+*.DotSettings
+.vs/
+
+# === Build artifacts ===
+*.exe
+*.dll
+*.winmd
+*.pri
+*.xbf
+temp_*
+bintemp_*
+..temp_release
+publish/
+
+# === IDE ===
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# === OS ===
+Thumbs.db
+.DS_Store
+
+# === WorkBuddy (memory/skills — not for public repo) ===
+.workbuddy/
+
+# === Dependency restore ===
+.nuget/
+packages/
+
+# === Test output ===
+TestResults/
+coverage/
+*.trx

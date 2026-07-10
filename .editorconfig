@@ -1,0 +1,84 @@
+# 顶级 EditorConfig 文件
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+end_of_line = crlf
+
+# C# 规则
+[*.cs]
+# 花括号
+csharp_prefer_braces = true:suggestion
+csharp_preserve_single_line_blocks = true:none
+csharp_preserve_single_line_statements = true:none
+
+# using 指令
+dotnet_sort_system_first_directives = true
+dotnet_separate_import_directive_groups = false
+
+# 命名规则
+dotnet_naming_rule.private_fields_rule.symbols = private_fields
+dotnet_naming_rule.private_fields_rule.style = prefix_underscore
+dotnet_naming_rule.private_fields_rule.severity = suggestion
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.prefix_underscore.required_prefix = _
+dotnet_naming_style.prefix_underscore.capitalization = camel_case
+
+dotnet_naming_rule.private_static_fields.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields.style = prefix_underscore
+dotnet_naming_rule.private_static_fields.severity = suggestion
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+dotnet_naming_style.private_static_prefix.required_prefix = s_
+dotnet_naming_style.private_static_prefix.capitalization = camel_case
+
+dotnet_naming_rule.interface_rule.symbols = interfaces
+dotnet_naming_rule.interface_rule.style = prefix_I
+dotnet_naming_rule.interface_rule.severity = error
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.prefix_I.required_prefix = I
+dotnet_naming_style.prefix_I.capitalization = pascal_case
+
+# 代码样式
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = true:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_prefer_null_check_over_type_check = true:suggestion
+csharp_style_throw_expression = true:suggestion
+
+# async/await
+csharp_style_prefer_await_using_declarations = true:suggestion
+
+# 空值检查
+csharp_style_conditional_delegate_call = true:suggestion
+
+# XAML
+[*.xaml]
+indent_size = 4
+indent_style = space
+
+# XML
+[*.xml]
+indent_size = 2
+indent_style = space
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# JSON
+[*.json]
+indent_size = 2
+
+# 项目文件
+[*.csproj]
+indent_size = 2
+indent_style = space

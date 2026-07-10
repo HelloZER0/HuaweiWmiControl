@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+    <Platform Name="arm64" />
+  </Configurations>
+  <Project Path="HuaweiWmiControl.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    <Platform Solution="*|arm64" Project="arm64" />
+  </Project>
+</Solution>

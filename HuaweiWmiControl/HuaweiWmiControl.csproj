@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <!-- 钉住 Windows SDK .NET Ref 版本，规避对新 .NET SDK 版本的强制要求 -->
+    <WindowsSdkPackageVersion>10.0.19041.38</WindowsSdkPackageVersion>
+    <!-- P1-6: WindowsSdkPath 使用 MSBuild 内置属性 $(MSBuildProgramFiles32) -->
+    <WindowsSdkPath Condition="'$(WindowsSdkPath)' == ''">$(MSBuildProgramFiles32)\Windows Kits\10\</WindowsSdkPath>
+    <RootNamespace>HuaweiWmiControl</RootNamespace>
+    <AssemblyName>HuaweiWmiControl</AssemblyName>
+    <AssemblyTitle>华为/荣耀笔记本调控工具</AssemblyTitle>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;x86;arm64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <PlatformTarget Condition="'$(PlatformTarget)' == ''">x64</PlatformTarget>
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <!-- WinRT 源生成器产生的代码含有 unsafe，必须开启 /unsafe 才能编译 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- 解包（unpackaged）模式：直接生成可运行的 exe，便于以管理员身份运行调用 WMI -->
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <!-- 设为 false 则 exe 不捆绑 WinUI 运行时，目标机器需自行安装 Windows App SDK Runtime -->
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <!-- 禁用自动生成的 Main，改用 Program.cs 中的手动引导入口 -->
+    <DisableXamlGeneratedMain>true</DisableXamlGeneratedMain>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <GenerateAppxManifest>false</GenerateAppxManifest>
+    <!-- P1-6: AppxMSBuildToolsPath 使用 MSBuild 内置属性推导 VS 路径，
+         仅在默认 SDK 路径缺失且 VS 确实安装时才覆盖。兼容 dotnet build 和 VS msbuild。 -->
+    <AppxMSBuildToolsPath Condition="'$(AppxMSBuildToolsPath)' == '' AND !Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll') AND Exists('$(ProgramFiles)\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VisualStudio\v18.0\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll')">$(ProgramFiles)\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VisualStudio\v18.0\AppxPackage\</AppxMSBuildToolsPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250310001" />
+    <PackageReference Include="Microsoft.Management.Infrastructure" Version="3.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.7.0.110445">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HuaweiWmiControl.Abstractions\HuaweiWmiControl.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
