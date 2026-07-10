@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: 安装 Windows App SDK 运行时
+        run: |
+          curl -fsSLo WindowsAppSDK-installer.exe https://aka.ms/windowsappsdk/1.7/1.7.250310001/windowsappruntimeinstall-x64.exe
+          ./WindowsAppSDK-installer.exe /quiet /norestart
+        shell: pwsh
+
+      - name: 还原 NuGet 包
+        run: dotnet restore HuaweiWmiControl.slnx
+
+      - name: 构建 Debug
+        run: dotnet build -c Debug -p:Platform=x64 --no-restore
+
+      - name: 运行单元测试
+        run: dotnet test -c Debug --no-build --verbosity normal
+
+      - name: 构建 Release
+        run: dotnet build -c Release -p:Platform=x64 --no-restore
+
+      - name: 发布（自包含）
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained `
+            -p:Platform=x64 `
+            -p:WindowsAppSDKSelfContained=true `
+            -o publish_output
+        shell: pwsh
+
+      - name: 上传构建产物
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: HuaweiWmiControl-${{ github.ref_name }}
+          path: publish_output/
