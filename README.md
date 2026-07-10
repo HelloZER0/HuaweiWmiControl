@@ -61,9 +61,9 @@ Linux 社区早已通过 [`huawei-wmi`](https://github.com/aymanbagabas/Huawei-W
 | 机型 | 系统 | 传感器 | 电池保护 | Fn-Lock | 键盘背光 | 智能充电 | 电源解锁 | 麦克风 LED | 报告人 |
 |------|------|:------:|:--------:|:-------:|:---------:|:--------:|:--------:|:-----------:|--------|
 | MateBook X Pro 2024 (MACH-WX9) | Windows 11 | ✅ | ✅¹ | ✅ | ✅² | ✅ | ✅ | ✅ | @HelloZER0 |
-| MateBook 14 2020 | Windows 11 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | @HelloZER0 |
-| MateBook D 14 (BIOS 1.17) | Windows 11 | ✅³ | ✅³ | ✅³ | ✅³ | ✅³ | ✅³ | ✅³ | @HelloZER0 |
-| MateBook E GO | Windows 11 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | @AceDroidX |
+| MateBook 14 2020 | Windows 11 | ➖ | ✅ | ➖ | ➖ | ➖ | ➖ | ➖ | @AceDroidX |
+| MateBook D 14 (BIOS 1.17) | Windows 11 | ➖ | ✅³ | ➖ | ➖ | ➖ | ➖ | ➖ | @AceDroidX |
+| MateBook E GO | Windows 11 | ➖ | ✅ | ➖ | ➖ | ➖ | ➖ | ➖ | @AceDroidX |
 | 荣耀 MagicBook (BRN-H76) | Windows 11 | ✅ | ✅ | ✅ | ⚠️⁴ | ❌⁵ | ✅ | ✅ | @HelloZER0 |
 | 荣耀 Hunter V700 | Windows 11 | ➖ | ✅ | ➖ | ➖ | ➖ | ➖ | ➖ | @AceDroidX |
 
