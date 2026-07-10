@@ -24,13 +24,13 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: 还原 NuGet 包
-        run: dotnet restore HuaweiWmiControl.slnx
+        run: dotnet restore HuaweiWmiControl.sln
 
       - name: 构建 Debug
         run: dotnet build -c Debug -p:Platform=x64 --no-restore
 
       - name: 运行单元测试
-        run: dotnet test -c Debug --no-build --verbosity normal
+        run: dotnet test HuaweiWmiControl.Tests\HuaweiWmiControl.Tests.csproj -c Debug --no-build --verbosity normal
 
       - name: 构建 Release
         run: dotnet build -c Release -p:Platform=x64 --no-restore
