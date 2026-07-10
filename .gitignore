@@ -25,6 +25,7 @@ ipch/
 temp_*
 bintemp_*
 ..temp_release
+..temp_verify/
 publish/
 
 # === IDE ===
@@ -37,6 +38,12 @@ publish/
 # === OS ===
 Thumbs.db
 .DS_Store
+
+# === User-specific ===
+*.bak
+global.json.bak
+Properties/launchSettings.json
+Properties/PublishProfiles/
 
 # === WorkBuddy (memory/skills — not for public repo) ===
 .workbuddy/
