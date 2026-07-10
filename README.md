@@ -187,7 +187,12 @@ HuaweiWmiControl/
 
 ## 鸣谢
 
-感谢以下 Linux 驱动社区成员在不同机型上的测试验证：
+特别感谢以下开源项目及其作者，本项目的诞生离不开他们的工作：
+
+- **[AceDroidX/HuaweiBatteryControl](https://github.com/AceDroidX/HuaweiBatteryControl)** — [@AceDroidX](https://github.com/AceDroidX) 的逆向分析为项目奠定了坚实基础
+- **[huawei-wmi](https://github.com/aymanbagabas/Huawei-WMI)** — [@aymanbagabas](https://github.com/aymanbagabas) 的 Linux 内核驱动提供了完整的命令编码参考
+
+同时感谢以下 Linux 驱动社区成员在不同机型上的测试验证：
 
 - Daniel Vogelbacher [@cytrinox](https://github.com/cytrinox) 和 Jan Baer [@janbaer](https://github.com/janbaer) — MateBook X (2017)
 - [@nekr0z](https://github.com/nekr0z) — MateBook 13 (2019) `WRT-WX9`，以及其项目 [matebook-applet](https://github.com/nekr0z/matebook-applet)
