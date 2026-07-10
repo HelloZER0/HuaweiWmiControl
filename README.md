@@ -40,7 +40,7 @@ Windows 侧与 Linux 驱动共用同一套固件命令，仅传输层不同：
 - Windows 10 17763+ / Windows 11
 - [.NET 8 SDK](https://dotnet.microsoft.com/download)
 - [Windows App SDK 运行时](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads)
-- **华为电脑管家** 或 **荣耀电脑管家**（提供 ACPI-WMI 驱动）
+- **华为/荣耀 ACPI-WMI 驱动**（由电脑管家安装提供，或手动安装驱动；仅需驱动本身，无需电脑管家后台常驻）
 - **管理员权限**（`app.manifest` 已声明 `requireAdministrator`）
 
 ### 编译
