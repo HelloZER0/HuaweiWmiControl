@@ -2,7 +2,7 @@
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com)
 [![WinUI](https://img.shields.io/badge/WinUI-3.0-0078D7)](https://learn.microsoft.com/windows/apps/winui)
-[![License](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey)](https://creativecommons.org/licenses/by-sa/4.0/)
+[![License](https://img.shields.io/badge/License-GPL_3.0-blue.svg)](LICENSE)
 
 基于华为笔记本 Linux 驱动 [`huawei-wmi`](https://github.com/aymanbagabas/Huawei-WMI) 移植的 **Windows 调控工具**。
 通过 WMI 调用固件 `OemWMIMethod` / `OemWMIfun` 接口，控制华为/荣耀笔记本硬件功能。
