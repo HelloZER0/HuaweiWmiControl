@@ -1,0 +1,95 @@
+name: CI (Native)
+
+# 原生 Win32 版本的构建与测试。
+#
+# 为什么需要这条独立流水线：
+#   开发机没有任何 C/C++ 工具链，native/ 下的代码在本地一次都没编译过。
+#   GitHub 的 windows-2022 runner 自带 MSVC + Windows SDK，是这段代码
+#   第一次被真正编译的地方——请把它当作「编译验证器」而不仅是发布脚本。
+#
+# 与 ci.yml（.NET/WinUI 版）并存，互不影响；旧版下线后可删除 ci.yml。
+
+on:
+  push:
+    branches: [main, native-win32-tray]
+    paths: ['native/**', '.github/workflows/ci-native.yml']
+  pull_request:
+    branches: [main]
+    paths: ['native/**', '.github/workflows/ci-native.yml']
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    defaults:
+      run:
+        working-directory: native
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- 1) 纯逻辑测试（不碰 COM / 硬件，失败即说明移植出错）------------
+      #     这一步被刻意放在最前面：它最便宜，且能最早暴露编解码问题。
+      - name: 构建 proto 纯逻辑测试
+        run: |
+          cl /nologo /utf-8 /W4 /O2 /MT /Isrc `
+            tests\test_proto.c src\proto.c `
+            /Fe:build\test_proto.exe
+        shell: pwsh
+
+      - name: 运行 proto 纯逻辑测试
+        run: .\build\test_proto.exe
+        shell: pwsh
+
+      # ---- 2) 构建托盘程序（CMake 或 cl 直连，两条路都验证一遍）----------
+      - name: CMake 配置
+        run: cmake -S . -B build-cmake -G "Visual Studio 17 2022" -A x64
+
+      - name: CMake 构建
+        run: cmake --build build-cmake --config Release
+
+      - name: cl.exe 直连构建（验证 build_msvc.bat 的编译命令有效）
+        run: |
+          rc /nologo /fo build\app.res app.rc
+          cl /nologo /utf-8 /W4 /EHsc /O2 /MT `
+            /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX `
+            /D_CRT_SECURE_NO_WARNINGS /Isrc `
+            src\proto.c src\log.cpp src\wmi.cpp src\services.cpp `
+            src\icon.cpp src\tray.cpp src\menu.cpp src\main.cpp `
+            build\app.res `
+            /Fe:build\HuaweiWmiControl.exe `
+            /link /SUBSYSTEM:WINDOWS /MANIFEST:EMBED /MANIFESTINPUT:app.manifest `
+            wbemuuid.lib ole32.lib oleaut32.lib user32.lib shell32.lib `
+            shlwapi.lib comctl32.lib gdi32.lib advapi32.lib
+        shell: pwsh
+
+      # ---- 3) 产物校验：确认清单已嵌入、文件确实是 GUI 子系统 ----------
+      - name: 校验产物
+        run: |
+          if (-not (Test-Path build\HuaweiWmiControl.exe)) {
+            Write-Error "未生成 HuaweiWmiControl.exe"
+            exit 1
+          }
+          $size = (Get-Item build\HuaweiWmiControl.exe).Length
+          Write-Host "产物大小: $size 字节"
+          if ($size -lt 30000) {
+            Write-Error "产物过小（$size），疑似链接不完整"
+            exit 1
+          }
+          # requireAdministrator 必须出现在嵌入清单里
+          $bytes = [System.IO.File]::ReadAllBytes("build\HuaweiWmiControl.exe")
+          $text  = [System.Text.Encoding]::Unicode.GetString($bytes)
+          if ($text -notmatch 'requireAdministrator') {
+            Write-Error "嵌入清单中未找到 requireAdministrator —— 提权配置丢失"
+            exit 1
+          }
+          Write-Host "清单校验通过：requireAdministrator 已嵌入"
+        shell: pwsh
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: HuaweiWmiControl-native-x64
+          path: |
+            native/build/HuaweiWmiControl.exe
+            native/build/test_proto.exe
