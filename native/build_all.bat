@@ -51,7 +51,7 @@ if not exist build mkdir build
 
 echo.
 echo === [1/3] build proto logic tests ===
-cl.exe /nologo /utf-8 /W4 /O2 /MT /Isrc tests\test_proto.c src\proto.c /Fe:build\test_proto.exe
+cl.exe /nologo /utf-8 /W4 /O2 /MT /Isrc /Fo:build\\ tests\test_proto.c src\proto.c /Fe:build\test_proto.exe
 if errorlevel 1 (
     echo [FAILED] test program does not compile
     exit /b 1
@@ -67,6 +67,17 @@ if errorlevel 1 (
 
 echo.
 echo === [3/3] build tray application ===
+
+REM A running instance keeps build\HuaweiWmiControl.exe locked, which surfaces as
+REM a bare "LNK1104: cannot open file". Detect it first and say what to do.
+tasklist /FI "IMAGENAME eq HuaweiWmiControl.exe" 2>nul | find /I "HuaweiWmiControl.exe" >nul
+if not errorlevel 1 (
+    echo [BLOCKED] HuaweiWmiControl.exe is still running.
+    echo           It holds a lock on build\HuaweiWmiControl.exe, so linking would fail.
+    echo           Quit it first: right-click the tray icon, then choose "Exit".
+    exit /b 1
+)
+
 rc.exe /nologo /fo build\app.res app.rc
 if errorlevel 1 (
     echo [FAILED] rc.exe
@@ -79,7 +90,7 @@ REM requireAdministrator in app.manifest and fails with:
 REM   manifest authoring error c1010001: Values of attribute level not equal
 cl.exe /nologo /utf-8 /W4 /EHsc /O2 /MT ^
     /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS ^
-    /Isrc ^
+    /Isrc /Fo:build\\ ^
     src\proto.c src\log.cpp src\wmi.cpp src\services.cpp ^
     src\icon.cpp src\tray.cpp src\menu.cpp src\main.cpp ^
     build\app.res ^

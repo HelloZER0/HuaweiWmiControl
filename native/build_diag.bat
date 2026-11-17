@@ -25,7 +25,7 @@ cd /d "%~dp0"
 if not exist build mkdir build
 set COMMON=src\proto.c src\log.cpp src\wmi.cpp src\services.cpp
 set LIBS=wbemuuid.lib ole32.lib oleaut32.lib advapi32.lib shell32.lib shlwapi.lib user32.lib
-set CFLAGS=/nologo /utf-8 /W4 /EHsc /O2 /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Isrc
+set CFLAGS=/nologo /utf-8 /W4 /EHsc /O2 /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Isrc /Fo:build\
 
 echo [1/3] diag_live   -- all getters + write-back
 cl.exe %CFLAGS% %COMMON% tests\diag_live.cpp /Fe:build\diag_live.exe /link %LIBS%
