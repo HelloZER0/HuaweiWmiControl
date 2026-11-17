@@ -406,6 +406,8 @@ extern "C" HwStatus hw_wmi_call(HwDevice* dev, uint64_t cmd,
         if (st != HW_OK) return st; /* COM 层故障：重试无意义 */
 
         if (n > 0 && tmp[0] == (uint8_t)HW_STATUS_SUCCESS) {
+            /* 成功时清零，避免诊断把上一次失败的状态码当成本次结果。 */
+            dev->last_fw_status = 0;
             if (out) memcpy(out, tmp, (size_t)n);
             if (out_len) *out_len = n;
             return HW_OK;

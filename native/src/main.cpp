@@ -114,6 +114,8 @@ void AppProbeKbd(AppState* st)
 
     if (s == HW_OK) {
         st->avail_kbd = 1;
+        /* 读得到不代表写得了：先乐观置 1，首次写失败时由 menu.cpp 置 0。 */
+        st->kbd_level_rw = 1;
         if (level < 0) level = 0;
         if (level > 2) level = 2;
         st->kbd_level = level;
@@ -246,6 +248,12 @@ void AppProbeAll(AppState* st)
     /* 麦克风 LED 只有 SET 没有 GET，无法探测：
      * 设备在线时乐观认为可用，直到 set 明确返回 NOT_SUPPORTED 才置灰。 */
     st->avail_micled = 1;
+
+    /* 把探测结论落进日志：真机排查「哪项被置灰」时一眼可见。 */
+    hw_log(L"功能探测：电池=%d FnLock=%d 背光=%d(超时=%d) 智能充电=%d 电源解锁=%d MIC=%d",
+           st->avail_battery, st->avail_fnlock, st->avail_kbd,
+           st->kbd_timeout_ok, st->avail_smartcharge,
+           st->avail_powerunlock, st->avail_micled);
 }
 
 /* ============================================================================

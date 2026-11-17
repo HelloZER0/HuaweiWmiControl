@@ -45,6 +45,9 @@ struct AppState {
     int kbd_level;              /* 0=关 1=低 2=高 */
     int kbd_timeout;            /* 秒，0=常亮 */
     int kbd_timeout_ok;         /* 超时读取是否成功（固件可能单独不支持） */
+    int kbd_level_rw;           /* 亮度是否可写。部分机型（荣耀 BRN 系列）
+                                 * 亮度只读：读得到、写被固件拒绝。
+                                 * 探测阶段无法区分，只能在首次写失败后置 0。 */
     int charge_mode;            /* 智能充电 mode */
     int charge_unknown;         /* 智能充电 unknown 字节 */
     int charge_start;           /* 智能充电 start */

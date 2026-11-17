@@ -35,6 +35,15 @@ inline UINT FlagsIf(int cond, UINT flag)
     return cond ? flag : 0u;
 }
 
+/* 功能不可用时置灰。
+ * 刻意不用 FlagsIf(avail, MF_GRAYED)：那样漏写一个 ! 语义就会整个反转。
+ * 真机验证时就踩过这个坑——所有「可用」的功能被灰掉、唯一不支持的反而不灰。
+ * 这里用「可用 → 不灰」的显式命名，杜绝同类错误。 */
+inline UINT GrayUnavailable(int available)
+{
+    return available ? 0u : (UINT)MF_GRAYED;
+}
+
 /* 把 cmd 映射成熄灭超时秒数；不属于超时命令时 *ok = 0。 */
 static int KbdTimeoutSeconds(int cmd, int* ok)
 {
@@ -98,7 +107,7 @@ static HMENU BuildMenuTree(const AppState* st)
     /* -------------------------------------------------------- 电池保护 --- */
     {
         MenuGuard bat(CreatePopupMenu());
-        UINT g = FlagsIf(st->avail_battery, MF_GRAYED);
+        UINT g = GrayUnavailable(st->avail_battery);
         if (bat.Get() == NULL) return NULL;
 
         AppendMenuW(bat.Get(), MF_STRING | g, (UINT_PTR)CMD_BATTERY_OFF,
@@ -131,24 +140,27 @@ static HMENU BuildMenuTree(const AppState* st)
 
     /* ----------------------------------------------------------- Fn-Lock --- */
     AppendMenuW(main.Get(),
-                MF_STRING | FlagsIf(!st->avail_fnlock, MF_GRAYED) |
+                MF_STRING | GrayUnavailable(st->avail_fnlock) |
                     FlagsIf(st->fnlock_on, MF_CHECKED),
                 (UINT_PTR)CMD_FNLOCK_TOGGLE, L"Fn-Lock");
 
     /* -------------------------------------------------------- 键盘背光 --- */
     {
         MenuGuard kbd(CreatePopupMenu());
-        UINT g = FlagsIf(st->avail_kbd, MF_GRAYED);
-        UINT tg = FlagsIf(st->avail_kbd && st->kbd_timeout_ok, MF_GRAYED);
+        UINT g = GrayUnavailable(st->avail_kbd);
+        UINT tg = GrayUnavailable(st->avail_kbd && st->kbd_timeout_ok);
+        /* 亮度可写性单独判定：荣耀 BRN 系列等机型亮度只读，
+         * 探测阶段读得到但写入会被固件拒绝（真机验证确认）。 */
+        UINT lg = GrayUnavailable(st->avail_kbd && st->kbd_level_rw);
         if (kbd.Get() == NULL) return NULL;
 
-        AppendMenuW(kbd.Get(), MF_STRING | g |
+        AppendMenuW(kbd.Get(), MF_STRING | lg |
                         FlagsIf(st->kbd_level == 0, MF_CHECKED),
                     (UINT_PTR)CMD_KBD_OFF, L"关");
-        AppendMenuW(kbd.Get(), MF_STRING | g |
+        AppendMenuW(kbd.Get(), MF_STRING | lg |
                         FlagsIf(st->kbd_level == 1, MF_CHECKED),
                     (UINT_PTR)CMD_KBD_LOW, L"低");
-        AppendMenuW(kbd.Get(), MF_STRING | g |
+        AppendMenuW(kbd.Get(), MF_STRING | lg |
                         FlagsIf(st->kbd_level == 2, MF_CHECKED),
                     (UINT_PTR)CMD_KBD_HIGH, L"高");
         AppendMenuW(kbd.Get(), MF_SEPARATOR, 0, NULL);
@@ -191,7 +203,7 @@ static HMENU BuildMenuTree(const AppState* st)
     /* -------------------------------------------------------- 智能充电 --- */
     {
         MenuGuard sc(CreatePopupMenu());
-        UINT g = FlagsIf(st->avail_smartcharge, MF_GRAYED);
+        UINT g = GrayUnavailable(st->avail_smartcharge);
         if (sc.Get() == NULL) return NULL;
 
         {
@@ -244,14 +256,14 @@ static HMENU BuildMenuTree(const AppState* st)
 
     /* -------------------------------------------------------- 电源解锁 --- */
     AppendMenuW(main.Get(),
-                MF_STRING | FlagsIf(!st->avail_powerunlock, MF_GRAYED) |
+                MF_STRING | GrayUnavailable(st->avail_powerunlock) |
                     FlagsIf(st->powerunlock_on, MF_CHECKED),
                 (UINT_PTR)CMD_POWERUNLOCK_TOGGLE, L"电源解锁");
 
     /* ------------------------------------------------------ 麦克风 LED --- */
     {
         MenuGuard mic(CreatePopupMenu());
-        UINT g = FlagsIf(st->avail_micled, MF_GRAYED);
+        UINT g = GrayUnavailable(st->avail_micled);
         if (mic.Get() == NULL) return NULL;
         /* 无回读：只给动作，不给勾选状态。 */
         AppendMenuW(mic.Get(), MF_STRING | g, (UINT_PTR)CMD_MICLED_ON, L"点亮");
@@ -354,8 +366,19 @@ static void SetKbdLevel(AppState* st, int level)
     HwStatus s = hw_kbd_set_level(&st->dev, level);
 
     hw_log_result(L"键盘背光", s);
-    if (s == HW_OK) st->kbd_level = level;
-    else            AppProbeKbd(st);
+    if (s == HW_OK) {
+        st->kbd_level = level;
+        st->kbd_level_rw = 1;
+    } else if (s == HW_ERR_NOT_SUPPORTED) {
+        /* 亮度只读机型：记住结论，菜单下次弹出就把三项置灰，
+         * 用户不必反复点同一个必然失败的项。 */
+        st->kbd_level_rw = 0;
+        hw_log(L"键盘背光：本机型亮度只读（仅熄灭超时可设置），已置灰亮度选项。");
+        AppProbeKbd(st);
+        st->kbd_level_rw = 0;   /* AppProbeKbd 成功时会重置为 1，这里再钉一次 */
+    } else {
+        AppProbeKbd(st);
+    }
 }
 
 static void SetKbdTimeout(AppState* st, int sec)
