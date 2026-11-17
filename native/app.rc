@@ -1,0 +1,40 @@
+/* ============================================================================
+ * app.rc — 仅含版本信息。
+ * 执行清单（requireAdministrator / PerMonitorV2）由链接器的
+ * /MANIFESTINPUT 嵌入，不在此处放 RT_MANIFEST，避免出现两份清单。
+ * ========================================================================== */
+#pragma code_page(65001)
+
+#define VER_FILEVERSION       1,0,0,0
+#define VER_FILEVERSION_STR   "1.0.0.0\0"
+#define VER_PRODUCTVERSION    1,0,0,0
+#define VER_PRODUCTVERSION_STR "1.0.0.0\0"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    VER_FILEVERSION
+ PRODUCTVERSION VER_PRODUCTVERSION
+ FILEFLAGSMASK  0x3fL
+ FILEFLAGS      0x0L
+ FILEOS         0x40004L
+ FILETYPE       0x1L
+ FILESUBTYPE    0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "Comments",         "Win32 托盘版；无 .NET / WinUI 依赖\0"
+            VALUE "FileDescription",  "华为/荣耀笔记本调控工具\0"
+            VALUE "FileVersion",      VER_FILEVERSION_STR
+            VALUE "InternalName",     "HuaweiWmiControl\0"
+            VALUE "LegalCopyright",   "GPL-2.0\0"
+            VALUE "OriginalFilename", "HuaweiWmiControl.exe\0"
+            VALUE "ProductName",      "HuaweiWmiControl Native\0"
+            VALUE "ProductVersion",   VER_PRODUCTVERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END
