@@ -61,10 +61,19 @@ flowchart LR
 
 ## 代码规范
 
-- 遵循项目已有的代码风格（.editorconfig 已配置）
-- 提交前运行 `dotnet format` 格式化代码
-- 保持三层架构的职责分离：UI 层不直接调用 WMI，抽象层不引用 WinUI
-- 新增 WMI 命令时需同步添加单元测试
+- 遵循项目已有的代码风格（`.editorconfig` 已配置；缩进 4 空格、UTF-8 **无 BOM**）
+- 源文件直接写中文宽字符串字面量（`L"中文"`），构建脚本已带 `/utf-8`
+- **批处理脚本保持纯 ASCII**：cmd.exe 按 OEM 码页（简中 936）解析 `.bat`，
+  UTF-8 中文会把命令行切碎，报出 `'sual' is not recognized` 这类怪错
+- 保持分层：`src/proto.h` 与 `src/hwapi.h` 是**冻结契约**；
+  外壳层（`main` / `menu` / `tray` / `icon`）只允许调用 `hwapi.h`，
+  不得直接接触 COM / WMI
+- 新增 WMI 命令时：
+  1. 常量加进 `src/proto.h`
+  2. 解析器写成**带长度校验的纯函数**（不得直接下标访问 `u8Output`）
+  3. 在 `tests/test_proto.c` 补断言
+- 涉及硬件写入的改动**必须在真机上验证**，PR 里贴上
+  `%LOCALAPPDATA%\HuaweiWmiControl\hwc.log` 的相关片段
 
 ## 提交 Issue
 
@@ -80,8 +89,9 @@ flowchart LR
 3. 提交你的改动
 4. 确保所有测试通过：
 
-   ```sh
-   dotnet test
+   ```bat
+   build_test_proto.bat    :: 纯逻辑测试，无需硬件，必须全绿
+   build_all.bat           :: 必须编译通过
    ```
 
 5. 发起 PR，描述清楚改动内容和测试情况
