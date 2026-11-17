@@ -1,40 +1,47 @@
 @echo off
-REM =============================================================================
-REM  build_test_proto.bat — 单独构建并运行 proto.h 纯逻辑测试
+REM ===========================================================================
+REM  build_test_proto.bat -- build and run ONLY the proto.h logic tests
 REM
-REM  这一组测试不需要华为硬件、不需要 COM、不需要管理员权限。
-REM  只用 Windows SDK 的 C 运行时即可（或 MinGW 的 gcc）。
+REM  These tests are pure logic: no COM, no WMI, no admin rights, no Huawei
+REM  hardware. They are the only part of this project verifiable off-device.
 REM
-REM  用法：在「x64 Native Tools Command Prompt」中运行本脚本。
-REM =============================================================================
-setlocal
+REM  ASCII only on purpose (cmd.exe parses .bat with the OEM code page).
+REM ===========================================================================
+setlocal enabledelayedexpansion
 
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+set "VSDIR="
+if exist "!VSWHERE!" (
+    for /f "usebackq tokens=*" %%i in (`"!VSWHERE!" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSDIR=%%i"
+)
+
+REM Fall back to the caller's environment if cl is already on PATH
+REM (e.g. started from a "x64 Native Tools Command Prompt").
 where cl.exe >nul 2>nul
 if errorlevel 1 (
-    echo [错误] 未找到 cl.exe，请使用 Visual Studio 的开发者命令提示符。
-    exit /b 1
+    if "!VSDIR!"=="" (
+        echo [ERROR] cl.exe not on PATH and no Visual Studio with MSVC found.
+        exit /b 1
+    )
+    call "!VSDIR!\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
 )
 
+cd /d "%~dp0"
 if not exist build mkdir build
 
-echo [1/2] 编译测试...
-cl.exe /nologo /utf-8 /W4 /O2 /MT /Isrc ^
-    tests\test_proto.c src\proto.c ^
-    /Fe:build\test_proto.exe
+echo === [1/2] build proto logic tests ===
+cl.exe /nologo /utf-8 /W4 /O2 /MT /Isrc tests\test_proto.c src\proto.c /Fe:build\test_proto.exe
 if errorlevel 1 (
-    echo [错误] 编译失败。
+    echo [FAILED] test program does not compile
     exit /b 1
 )
 
-echo [2/2] 运行测试...
 echo.
+echo === [2/2] run proto logic tests ===
 build\test_proto.exe
-set RC=%errorlevel%
-echo.
-if not "%RC%"=="0" (
-    echo 测试失败，退出码 %RC%
-    exit /b %RC%
+if errorlevel 1 (
+    echo [FAILED] tests failed
+    exit /b 1
 )
-echo 测试全部通过。
-endlocal
+echo [OK] all proto.h assertions passed
 exit /b 0

@@ -48,7 +48,7 @@ jobs:
       - name: CMake 构建
         run: cmake --build build-cmake --config Release
 
-      - name: cl.exe 直连构建（验证 build_msvc.bat 的编译命令有效）
+      - name: cl.exe 直连构建（验证 build_all.bat 的编译命令有效）
         run: |
           rc /nologo /fo build\app.res app.rc
           cl /nologo /utf-8 /W4 /EHsc /O2 /MT `
@@ -58,7 +58,8 @@ jobs:
             src\icon.cpp src\tray.cpp src\menu.cpp src\main.cpp `
             build\app.res `
             /Fe:build\HuaweiWmiControl.exe `
-            /link /SUBSYSTEM:WINDOWS /MANIFEST:EMBED /MANIFESTINPUT:app.manifest `
+            /link /SUBSYSTEM:WINDOWS /MANIFEST:EMBED `
+            /MANIFESTINPUT:app.manifest /MANIFESTUAC:NO `
             wbemuuid.lib ole32.lib oleaut32.lib user32.lib shell32.lib `
             shlwapi.lib comctl32.lib gdi32.lib advapi32.lib
         shell: pwsh

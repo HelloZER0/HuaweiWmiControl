@@ -4,9 +4,17 @@
 只有一个任务栏托盘图标 + 右键/左键弹出菜单，直接通过 COM/`IWbemLocator`
 调用 `ROOT\WMI` 的固件方法。
 
-> 状态：**源码已完成，未经编译器验证。** 开发机未安装任何 C/C++ 工具链
-> （无 MSVC / MinGW / clang，也无 Windows SDK），因此本目录下的代码**一次都没有编译过**。
-> 首次构建时请预期需要修若干编译错误，详见文末「已知风险」。
+> **状态（2026-11-18 更新）：已编译通过。**
+> 首次移植时开发机无任何 C/C++ 工具链，代码未经编译；随后在
+> **MSVC 19.52（VS 2026 Community）+ Windows SDK 10.0.26100** 上完成首次构建，
+> 修掉 3 个问题后 `cl` 与 `CMake` 两条路径均构建成功：
+>
+> - `proto.h` 纯逻辑测试：**183 个断言全部通过**（含 4 个逆向抓包值交叉校验）
+> - 产物 `HuaweiWmiControl.exe`：197 KB、`Subsystem=2`（GUI）、
+>   `requireAdministrator` 已嵌入清单
+>
+> **仍未验证的部分**：全部 `hw_*` 与硬件交互的行为（需华为真机 + 管理员权限），
+> 详见文末「已知风险」。
 
 ---
 
@@ -28,16 +36,26 @@
 
 ### 前置
 
-- Visual Studio 2022（或 Build Tools 2022），勾选「使用 C++ 的桌面开发」
-- Windows 10 SDK（10.0.19041 或更新）
+- **Visual Studio 2022 或 2026**，安装时勾选「**使用 C++ 的桌面开发**」工作负载
+  （它会带上 MSVC 工具集 + Windows SDK；只装 VS 本体是不够的）
+- Windows 10/11 SDK（10.0.19041 或更新；已在 10.0.26100 上验证）
 - 不需要 .NET SDK、不需要 CMake（可选）
 
-### 方式 A：直接用 cl.exe（推荐，零额外依赖）
+### 方式 A：一键构建（推荐）
 
-打开 **「x64 Native Tools Command Prompt for VS 2022」**，`cd` 到本目录：
+在**普通命令提示符**里、`cd` 到本目录后运行：
 
 ```bat
-build_msvc.bat
+build_all.bat
+```
+
+它会用 `vswhere` 自动定位 Visual Studio 并调用 `vcvars64.bat`，不需要你先开
+「开发者命令提示符」。流程是：编测试 → 跑测试 → 编主程序。
+
+只想跑纯逻辑测试（不需要管理员、不需要华为硬件）：
+
+```bat
+build_test_proto.bat
 ```
 
 产物：`build\HuaweiWmiControl.exe`
@@ -45,11 +63,17 @@ build_msvc.bat
 ### 方式 B：CMake
 
 ```bat
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
+cmake -S . -B build-cmake -G "Visual Studio 17 2022" -A x64
+cmake --build build-cmake --config Release
 ```
 
-产物：`build\Release\HuaweiWmiControl.exe`
+（VS 2026 用 `-G "Visual Studio 18 2026"`。）
+
+产物：`build-cmake\Release\HuaweiWmiControl.exe`，另带 `test_proto.exe`。
+
+> ⚠️ **批处理脚本一律保持纯 ASCII。** cmd.exe 用 OEM 码页（简中为 936）解析
+> `.bat`，UTF-8 中文会把命令行切碎，报出 `'sual' is not recognized` 这类怪错。
+> 中文说明只放在本 README 里。
 
 ### 关键编译选项
 
@@ -58,6 +82,7 @@ cmake --build build --config Release
 | `/utf-8` | 源码里直接写中文宽字符串字面量，缺了会变乱码 |
 | `/MT` | 静态 CRT，目标机无需 VC++ 运行时 |
 | `/MANIFESTINPUT:app.manifest` | 嵌入 `requireAdministrator` + `PerMonitorV2`，不用 .rc 的 `RT_MANIFEST`（避免双清单） |
+| `/MANIFESTUAC:NO` | **必需**。否则链接器仍会追加一份 `level="asInvoker"` 的 UAC 片段，与清单里的 `requireAdministrator` 冲突，报 `manifest authoring error c1010001: Values of attribute level not equal` |
 | `/SUBSYSTEM:WINDOWS` | 无控制台窗口 |
 
 ---
@@ -93,7 +118,10 @@ native/
 ├── app.manifest            # requireAdministrator + PerMonitorV2 + UTF-8 ACP
 ├── app.rc                  # 版本信息（不含清单）
 ├── CMakeLists.txt
-├── build_msvc.bat          # 直接 cl.exe 构建
+├── build_all.bat           # 一键构建：定位 VS → 编测试 → 跑测试 → 编主程序
+├── build_test_proto.bat    # 只编 + 跑纯逻辑测试
+├── tests/
+│   └── test_proto.c        # 183 个断言，无需硬件
 └── src/
     ├── proto.h  proto.c    # ★冻结契约：命令号/常量/纯编解码函数/温度区表
     ├── hwapi.h             # ★冻结契约：对外 C API + HwStatus + HwDevice
@@ -129,28 +157,53 @@ native/
 
 ## 5. 测试现状
 
-旧版唯一有价值的单测是 `WmiServiceBaseTests`（打桩协议，验证重试与状态码判定）。
+本版把**全部纯逻辑**（命令编码、`u8Output` 解析、键盘背光编码判定/解码/反编码）
+都收敛进了 `proto.h` 的 `static inline` 函数，**不依赖 Windows.h、不依赖 COM**，
+因此可以由 `tests/test_proto.c` 直接编译运行：
 
-本版把**全部纯逻辑**（命令编码、u8Output 解析、键盘编码判定/解码/反编码）都收敛进了
-`proto.h` 的 `static inline` 函数，**不依赖 Windows.h、不依赖 COM**，因此可以直接用
-任意 C 测试框架独立编译测试。建议下一步补一个 `tests/test_proto.c`，
-把旧版的 9 个用例翻译过来——这是本项目唯一能脱离真机验证的部分。
+```
+build_test_proto.bat
+→ 通过 183，失败 0
+```
 
-`services.cpp` / `wmi.cpp` 需要真实固件，只能真机回归。
+覆盖点：
+
+- **4 个逆向抓包值的交叉校验**（最强证据）：用 `docs/reverse-engineering.md`
+  里 x64dbg 抓到的 PC Manager 实际下发值反推编码器是否正确
+  （`0x64001003` / `0x5A461003` / `0x46281003` / `0x645F1003`）。
+- 17 条命令号与 5 个协议常量逐一比对
+- 各响应解析器的正常值、全零、**缓冲区过短**（不得越界读）
+- 键盘背光三种编码的级别解码 + 编码→解码往返一致性 + 越界夹紧
+- 温度区表 11 项、索引不重复
+
+`services.cpp` / `wmi.cpp` 需要真实固件，只能真机回归——这是本项目剩余的唯一盲区。
 
 ---
 
-## 6. 已知风险（首次构建必读）
+## 6. 已知风险
+
+### 6.1 首次构建时修掉的 3 个问题（已修复，记录以备回溯）
+
+| 现象 | 原因 | 修复 |
+|---|---|---|
+| `'sual' is not recognized`、命令行被切碎 | `.bat` 里写了 UTF-8 中文，而 cmd.exe 按 OEM 码页（936）解析 `.bat` | 所有 `.bat` 改为纯 ASCII，中文说明移入本 README |
+| `log.cpp(330): error C3861: "ShellExecuteW": 找不到标识符` | 缺 `#include <shellapi.h>` | `log.cpp` 补上该头 |
+| `LNK1327` + `manifest authoring error c1010001: Values of attribute "level" not equal` | 链接器默认 UAC 片段（`asInvoker`）与清单里的 `requireAdministrator` 合并冲突 | 链接加 `/MANIFESTUAC:NO` |
+
+### 6.2 仍未验证的部分
 
 | # | 风险 | 说明 / 处理 |
 |---|---|---|
-| R1 | **完全未经编译** | 本机无工具链。首次 `build_msvc.bat` 大概率报若干编译错误（缺 include、API 签名细节）。请逐个修，不要怀疑整体设计 |
-| R2 | **回到 DCOM** | 旧版特意从 `System.Management`/DCOM 迁到 CIM/WS-Man；本版因要脱离 .NET 又回到 `IWbemLocator`。本机连接通常没问题，但 `CoInitializeSecurity` 时机、`CoSetProxyBlanket` 的认证级别是经典坑位，需真机验证 |
+| R1 | **硬件行为全部未验证** | 编译与纯逻辑测试通过 ≠ 固件调用正确。7 项功能需在华为/荣耀真机上逐项回归 |
+| R2 | **回到 DCOM** | 旧版特意从 `System.Management`/DCOM 迁到 CIM/WS-Man；本版因要脱离 .NET 又回到 `IWbemLocator`。本机连接通常没问题，但 `CoInitializeSecurity` 时机、`CoSetProxyBlanket` 认证级别是经典坑位，需真机验证 |
 | R3 | **STA 线程约束未验证** | 旧版注释声称 `Connect()` 必须在 STA，但无依据。本版在 `wWinMain` 所在线程（OLE STA）里完成全部 WMI 调用，行为与旧版一致，但不代表这是必要条件 |
 | R4 | 职责未拆分 | `wmi.cpp` 仍同时管连接、协议探测、键盘编码探测。这是**有意保留**：先保证移植正确，再谈重划边界（参见 `docs/refactor-plan.md`） |
-| R5 | 托盘图标是运行时画的 | 若 `CreateIconIndirect` 的 AND 掩码处理有误，图标会带黑底。回退方案：换 `LoadIconW(NULL, IDI_APPLICATION)` |
+| R5 | 托盘图标是运行时画的 | 若 `CreateIconIndirect` 的 AND 掩码处理有误，图标会带黑底。回退方案：`LoadIconW(NULL, IDI_APPLICATION)`（代码已内置该降级路径） |
 | R6 | 菜单无滑杆 | 旧版的 0-100 连续阈值在新 UI 里变成原厂预设（40-70 / 70-90 / 95-100）。要任意值需加配置或对话框 |
 | R7 | 智能充电语义未文档化 | 旧版也是把 `mode/unknown/start/end/param` 原样暴露，没有任何机型语义说明。本版保持原样 |
+| R8 | 传感器定时器阻塞消息循环 | WMI 调用是同步的，30 秒定时器刷新 13 个传感器时会占用 UI 线程。菜单弹出期间已用 `g_menuOpen` 跳过，但极端慢固件下仍可能感到卡顿 |
+| R9 | 托盘回调版本 | 本程序不调 `NIM_SETVERSION`，Shell 按 v1 语义回调（`lParam`=鼠标消息）。若未来要 v4 坐标，必须同步改 `WndProc` 的分支 |
+| R10 | `avail_micled` 乐观置 1 | 麦克风 LED 只有 SET 没有 GET，无法探测。刷新状态后会重新点亮为「可用」，需再点一次才会重新置灰 |
 
 ---
 

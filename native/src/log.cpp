@@ -21,6 +21,7 @@
 
 #include <windows.h>
 #include <shlobj.h>
+#include <shellapi.h>   /* ShellExecuteW（hw_log_open_in_shell）；漏了会报 C3861 */
 
 #include <stdarg.h>
 #include <stdio.h>

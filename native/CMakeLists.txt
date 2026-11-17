@@ -60,9 +60,13 @@ target_compile_options(HuaweiWmiControl PRIVATE
 
 # ---- 清单：requireAdministrator + PerMonitorV2 ------------------------------
 # 用链接器嵌入而不是 .rc 的 RT_MANIFEST，避免与 MSVC 默认清单冲突。
+# /MANIFESTUAC:NO 是必需的：否则链接器仍会生成一份 level="asInvoker" 的
+# UAC 片段，与本文件里的 requireAdministrator 合并时报
+# "manifest authoring error c1010001: Values of attribute level not equal"。
 target_link_options(HuaweiWmiControl PRIVATE
     "/MANIFEST:EMBED"
     "/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/app.manifest"
+    "/MANIFESTUAC:NO"
 )
 
 # ---- 链接库 ---------------------------------------------------------------

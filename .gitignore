@@ -56,3 +56,10 @@ packages/
 TestResults/
 coverage/
 *.trx
+
+# === native (C++/Win32 托盘版) ===
+native/build/
+native/build-cmake/
+*.obj
+*.res
+*.lib
