@@ -63,3 +63,8 @@ native/build-cmake/
 *.obj
 *.res
 *.lib
+
+# === agent worktrees ===
+# .agents/ 下是本机 git worktree 的工作目录（含嵌套 .git），
+# 不属于仓库内容，误 add 会引入整份检出副本。
+.agents/
