@@ -353,12 +353,44 @@ static void ApplyBattery(AppState* st, int start, int end)
 
 static void ToggleFnLock(AppState* st)
 {
+    int before = -1;
+    int after = -1;
     int target = st->fnlock_on ? 0 : 1;
-    HwStatus s = hw_fnlock_set(&st->dev, target);
+    HwStatus s;
 
+    /* 写入前先实测一次，避免用可能过期的缓存做决策
+     * （用户可能用 Fn+Esc 或电脑管家改过，缓存就老了）。 */
+    if (hw_fnlock_get(&st->dev, &before) == HW_OK && before != st->fnlock_on) {
+        hw_log(L"Fn-Lock：缓存(%d)与实测(%d)不一致，以实测为准",
+               st->fnlock_on, before);
+        st->fnlock_on = before;
+        target = before ? 0 : 1;
+    }
+
+    s = hw_fnlock_set(&st->dev, target);
     hw_log_result(L"Fn-Lock", s);
-    if (s == HW_OK) st->fnlock_on = target;
-    else            AppProbeFnLock(st);
+    if (s != HW_OK) {
+        AppProbeFnLock(st);
+        return;
+    }
+
+    /* 写后回读校验：固件返回成功不代表状态真的变了。
+     * 真机上出现过「成功但物理 Fn-Lock 无变化」的情况，必须读回确认真相。 */
+    if (hw_fnlock_get(&st->dev, &after) != HW_OK) {
+        st->fnlock_on = target;   /* 读不回就先信任写入 */
+        hw_log(L"Fn-Lock：写入 %d（%s），回读失败", target, target ? L"开" : L"关");
+        return;
+    }
+
+    if (after == target) {
+        st->fnlock_on = target;
+        hw_log(L"Fn-Lock：写入 %d（%s），回读 %d —— 已生效",
+               target, target ? L"开" : L"关", after);
+    } else {
+        hw_log(L"Fn-Lock：写入 %d（%s）返回成功，但回读为 %d —— 固件未采纳",
+               target, target ? L"开" : L"关", after);
+        st->fnlock_on = after;
+    }
 }
 
 static void SetKbdLevel(AppState* st, int level)

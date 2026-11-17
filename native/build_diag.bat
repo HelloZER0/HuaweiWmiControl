@@ -23,12 +23,25 @@ if errorlevel 1 (
 )
 cd /d "%~dp0"
 if not exist build mkdir build
-cl.exe /nologo /utf-8 /W4 /EHsc /O2 /MT ^
-    /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS ^
-    /Isrc ^
-    src\proto.c src\log.cpp src\wmi.cpp src\services.cpp tests\diag_live.cpp ^
-    /Fe:build\diag_live.exe ^
-    /link wbemuuid.lib ole32.lib oleaut32.lib advapi32.lib shell32.lib shlwapi.lib user32.lib
+set COMMON=src\proto.c src\log.cpp src\wmi.cpp src\services.cpp
+set LIBS=wbemuuid.lib ole32.lib oleaut32.lib advapi32.lib shell32.lib shlwapi.lib user32.lib
+set CFLAGS=/nologo /utf-8 /W4 /EHsc /O2 /MT /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Isrc
+
+echo [1/3] diag_live   -- all getters + write-back
+cl.exe %CFLAGS% %COMMON% tests\diag_live.cpp /Fe:build\diag_live.exe /link %LIBS%
 if errorlevel 1 ( echo [FAILED] & exit /b 1 )
-echo [OK] build\diag_live.exe
-echo      Run it elevated; results go to %%TEMP%%\hwc_diag.txt
+
+echo [2/3] diag_fnlock -- Fn-Lock raw bytes + value mapping (0..3)
+cl.exe %CFLAGS% %COMMON% tests\diag_fnlock.cpp /Fe:build\diag_fnlock.exe /link %LIBS%
+if errorlevel 1 ( echo [FAILED] & exit /b 1 )
+
+echo [3/3] diag_fnwatch -- poll Fn-Lock value, detects physical Fn+Esc
+cl.exe %CFLAGS% %COMMON% tests\diag_fnwatch.cpp /Fe:build\diag_fnwatch.exe /link %LIBS%
+if errorlevel 1 ( echo [FAILED] & exit /b 1 )
+
+echo.
+echo [OK] build\diag_live.exe / diag_fnlock.exe / diag_fnwatch.exe
+echo      Run elevated. Outputs:
+echo        %%TEMP%%\hwc_diag.txt     (all getters)
+echo        %%TEMP%%\hwc_fnlock.txt   (Fn-Lock raw + value mapping)
+echo        %%TEMP%%\hwc_fnwatch.txt  (Fn-Lock value changes; press Fn+Esc to correlate)
