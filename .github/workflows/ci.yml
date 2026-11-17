@@ -1,52 +1,100 @@
 name: CI
 
+# 原生 Win32 版本的编译验证与测试。
+#
+# 顺序刻意如此：纯逻辑测试最便宜、能最早暴露编解码错误，放最前面。
+# 后面用 CMake 与 cl 直连两条路径各构建一遍，确保两个入口都不腐化。
+
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - '*.bat'
+      - 'app.rc'
+      - 'app.manifest'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - '*.bat'
+      - 'app.rc'
+      - 'app.manifest'
+      - '.github/workflows/ci.yml'
 
 jobs:
   build:
     runs-on: windows-2022
 
-    defaults:
-      run:
-        working-directory: HuaweiWmiControl
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: 安装 .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: 还原 NuGet 包
-        run: dotnet restore HuaweiWmiControl.sln
-
-      - name: 构建 Debug
-        run: dotnet build -c Debug -p:Platform=x64 --no-restore
-
-      - name: 运行单元测试
-        run: dotnet test ..\HuaweiWmiControl.Tests\HuaweiWmiControl.Tests.csproj -c Debug --no-build --verbosity normal
-
-      - name: 构建 Release
-        run: dotnet build -c Release -p:Platform=x64 --no-restore
-
-      - name: 发布（自包含）
-        if: startsWith(github.ref, 'refs/tags/v')
+      # ---- 1) 纯逻辑测试（不碰 COM / 硬件，失败即说明移植出错）------------
+      - name: 构建 proto 纯逻辑测试
         run: |
-          dotnet publish -c Release -r win-x64 --self-contained `
-            -p:Platform=x64 `
-            -p:WindowsAppSDKSelfContained=true `
-            -o publish_output
+          cl /nologo /utf-8 /W4 /O2 /MT /Isrc /Fo:build\ `
+            tests\test_proto.c src\proto.c `
+            /Fe:build\test_proto.exe
         shell: pwsh
 
-      - name: 上传构建产物
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: 运行 proto 纯逻辑测试
+        run: .\build\test_proto.exe
+        shell: pwsh
+
+      # ---- 2) 构建托盘程序（CMake 与 cl 直连两条路都验证）---------------
+      - name: CMake 配置
+        run: cmake -S . -B build-cmake -G "Visual Studio 17 2022" -A x64
+
+      - name: CMake 构建
+        run: cmake --build build-cmake --config Release
+
+      - name: cl.exe 直连构建（验证 build_all.bat 的编译命令有效）
+        run: |
+          rc /nologo /fo build\app.res app.rc
+          cl /nologo /utf-8 /W4 /EHsc /O2 /MT `
+            /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX `
+            /D_CRT_SECURE_NO_WARNINGS /Isrc /Fo:build\ `
+            src\proto.c src\log.cpp src\wmi.cpp src\services.cpp `
+            src\icon.cpp src\tray.cpp src\menu.cpp src\main.cpp `
+            build\app.res `
+            /Fe:build\HuaweiWmiControl.exe `
+            /link /SUBSYSTEM:WINDOWS /MANIFEST:EMBED `
+            /MANIFESTINPUT:app.manifest /MANIFESTUAC:NO `
+            wbemuuid.lib ole32.lib oleaut32.lib user32.lib shell32.lib `
+            shlwapi.lib comctl32.lib gdi32.lib advapi32.lib
+        shell: pwsh
+
+      # ---- 3) 产物校验：GUI 子系统 + 清单里必须含 requireAdministrator ----
+      - name: 校验产物
+        run: |
+          if (-not (Test-Path build\HuaweiWmiControl.exe)) {
+            Write-Error "未生成 HuaweiWmiControl.exe"
+            exit 1
+          }
+          $size = (Get-Item build\HuaweiWmiControl.exe).Length
+          Write-Host "产物大小: $size 字节"
+          if ($size -lt 30000) {
+            Write-Error "产物过小（$size），疑似链接不完整"
+            exit 1
+          }
+          $bytes = [System.IO.File]::ReadAllBytes("build\HuaweiWmiControl.exe")
+          $text  = [System.Text.Encoding]::Unicode.GetString($bytes)
+          if ($text -notmatch 'requireAdministrator') {
+            Write-Error "嵌入清单中未找到 requireAdministrator —— 提权配置丢失"
+            exit 1
+          }
+          Write-Host "清单校验通过：requireAdministrator 已嵌入"
+        shell: pwsh
+
+      - name: 上传产物
         uses: actions/upload-artifact@v4
         with:
-          name: HuaweiWmiControl-${{ github.ref_name }}
-          path: HuaweiWmiControl/publish_output/
+          name: HuaweiWmiControl-x64
+          path: |
+            build/HuaweiWmiControl.exe
+            build/test_proto.exe
