@@ -75,6 +75,16 @@ build_diag.bat
 原样写回（不改变状态）。排查「某功能为什么置灰」时先跑它——它能区分
 「机型真的不支持」和「客户端代码有错」。
 
+清理编译中间件（`.obj` / `.res` / `.pdb` 等），保留 `build\*.exe`：
+
+```bat
+build_clean.bat        :: 只清中间件
+build_clean.bat all    :: 连 build\ 目录一起删
+```
+
+构建脚本已用 `/Fo:build\` 把目标文件统一收进 `build\`，源码根目录不会留下
+`.obj`；这个脚本用于回收磁盘或交付前清理。
+
 产物：`build\HuaweiWmiControl.exe`
 
 ### 方式 B：CMake
@@ -138,6 +148,7 @@ native/
 ├── build_all.bat           # 一键构建：定位 VS → 编测试 → 跑测试 → 编主程序
 ├── build_test_proto.bat    # 只编 + 跑纯逻辑测试
 ├── build_diag.bat          # 编真机诊断工具（需管理员运行）
+├── build_clean.bat         # 清理编译中间件（保留 build\*.exe）
 ├── tests/
 │   ├── test_proto.c        # 183 个断言，无需硬件
 │   ├── diag_live.cpp       # 真机诊断：逐项打印 HwStatus + 写回测试
